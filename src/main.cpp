@@ -11,10 +11,9 @@ MqttCredentialModel mqttCredential;
 WifiCredentialModel wifiCredential;
 CertificateCredentialModel certificateCredential;
 
-bool configLoaded = false;
-
 Payload payload;
 char *payloadJson;
+bool configLoaded = false;
 
 void messageHandler(char *topic, uint8_t *payload, unsigned int length)
 {
@@ -65,7 +64,7 @@ void connectWiFi()
   WiFi.begin(wifiCredential.ssid.c_str(), wifiCredential.password.c_str());
   while (WiFi.status() != WL_CONNECTED)
   {
-    delay(100);
+    delay(250);
     Serial.print(".");
   }
   Serial.println("");
@@ -121,6 +120,7 @@ void setup()
     Serial.println("Failed to load configuration secrets");
     return;
   }
+
   connectWiFi();
   connectAWS();
 }

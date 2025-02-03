@@ -6,7 +6,6 @@
 String readFile(fs::FS &fs, const char *path)
 {
     Serial.printf("Reading file: %s\r\n", path);
-
     File file = fs.open(path, FILE_READ);
     if (!file)
     {
@@ -26,6 +25,7 @@ CertificateCredentialModel SecretService::getCertificateCredential()
 
 WifiCredentialModel SecretService::getWifiCredential()
 {
+    Serial.printf("Reading file: %s\r\n", WIFI_CONFIG_FILE);
     File wifiConfigFile = fileSystem.open(WIFI_CONFIG_FILE, "r");
     if (!wifiConfigFile)
     {
@@ -48,6 +48,7 @@ WifiCredentialModel SecretService::getWifiCredential()
 
 MqttCredentialModel SecretService::getMqttCredential()
 {
+    Serial.printf("Reading file: %s\r\n", MQTT_CONFIG_FILE);
     File mqttConfigFile = fileSystem.open(MQTT_CONFIG_FILE, "r");
     if (!mqttConfigFile)
     {
