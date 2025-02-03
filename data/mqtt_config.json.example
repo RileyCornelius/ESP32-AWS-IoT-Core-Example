@@ -1,0 +1,6 @@
+{
+    "port": 8883,
+    "host": "YOUR_AWS_IOT_CORE_ENDPOINT",
+    "clientId": "esp_test1",
+    "publishTopic": "esp32/sensor/test"
+}

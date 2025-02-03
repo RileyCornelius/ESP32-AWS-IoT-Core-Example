@@ -7,3 +7,4 @@
 /data/*.pem
 /data/*.key
 /data/*.crt
+/data/*.json
