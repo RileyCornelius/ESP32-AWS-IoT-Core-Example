@@ -6,24 +6,14 @@
 class Payload
 {
 private:
-    String clientId;
-    bool isClientIdValid;
-    float humidity;
-    bool isHumidityValid;
-    float temperature;
-    bool isTemperatureValid;
+    String clientId = "";
+    bool isClientIdValid = false;
+    float humidity = 0;
+    bool isHumidityValid = false;
+    float temperature = 0;
+    bool isTemperatureValid = false;
 
 public:
-    Payload()
-    {
-        clientId = "";
-        isClientIdValid = false;
-        humidity = 0;
-        isHumidityValid = false;
-        temperature = 0;
-        isTemperatureValid = false;
-    };
-
     void setClientId(String clientId, bool isClientIdValid)
     {
         this->clientId = clientId;
