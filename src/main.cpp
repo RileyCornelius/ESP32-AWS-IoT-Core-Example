@@ -11,19 +11,28 @@ MqttCredentialModel mqttCredential;
 WifiCredentialModel wifiCredential;
 CertificateCredentialModel certificateCredential;
 
+bool configLoaded = false;
+
 Payload payload;
 char *payloadJson;
 
-void setup()
+void messageHandler(char *topic, uint8_t *payload, unsigned int length)
 {
-  delay(3000); // Wait for Serial Monitor to connect
+  Serial.print("incoming: ");
+  Serial.println(topic);
 
-  Serial.begin(115200);
-  Serial.println("Starting...");
+  StaticJsonDocument<200> doc;
+  deserializeJson(doc, payload);
+  const char *message = doc["message"];
+  Serial.println(message);
+}
+
+bool loadConfigurationSecrets()
+{
   if (!LittleFS.begin())
   {
     Serial.println("An Error has occurred while mounting LittleFS");
-    return;
+    return false;
   }
 
   SecretService configService(LittleFS);
@@ -31,46 +40,56 @@ void setup()
   if (wifiCredential.isEmpty())
   {
     Serial.println("Wifi credential is empty");
-    return;
+    return false;
   }
 
   mqttCredential = configService.getMqttCredential();
   if (mqttCredential.isEmpty())
   {
     Serial.println("Mqtt credential is empty");
-    return;
+    return false;
   }
 
   certificateCredential = configService.getCertificateCredential();
   if (certificateCredential.isEmpty())
   {
     Serial.println("Certificate credential is empty");
-    return;
+    return false;
   }
+  return true;
+}
 
+void connectWiFi()
+{
+  Serial.print("WiFi Connecting..");
   WiFi.begin(wifiCredential.ssid.c_str(), wifiCredential.password.c_str());
   while (WiFi.status() != WL_CONNECTED)
   {
-    delay(1000);
+    delay(100);
     Serial.print(".");
   }
   Serial.println("");
   Serial.println("WiFi connected");
+}
 
+void connectAWS()
+{
   // Set the certificates to the client
   espClient.setCACert(certificateCredential.ca.c_str());
   espClient.setCertificate(certificateCredential.certificate.c_str());
   espClient.setPrivateKey(certificateCredential.privateKey.c_str());
 
+  // Set the server details and callback
   client.setServer(mqttCredential.host.c_str(), mqttCredential.port);
+  client.setCallback(messageHandler);
 
   while (!client.connected())
   {
-    Serial.println("Connecting to AWS IoT...");
+    Serial.println("AWS IoT Connecting...");
 
     if (client.connect(mqttCredential.clientId.c_str()))
     {
-      Serial.println("Connected to AWS IoT");
+      Serial.println("AWS IoT Connected");
     }
     else
     {
@@ -81,12 +100,38 @@ void setup()
     }
   }
 
+  // Subscribe to topic
+  if (!client.subscribe(mqttCredential.subscribeTopic.c_str()))
+  {
+    Serial.println("Subscribe to topic failed");
+  }
+
   // Setup payload with clientId
   payload.setClientId(mqttCredential.clientId, true);
 }
 
+void setup()
+{
+  delay(3000); // Wait for Serial Monitor to connect
+  Serial.begin(115200);
+
+  configLoaded = loadConfigurationSecrets();
+  if (!configLoaded)
+  {
+    Serial.println("Failed to load configuration secrets");
+    return;
+  }
+  connectWiFi();
+  connectAWS();
+}
+
 void loop()
 {
+  if (!configLoaded)
+  {
+    return;
+  }
+
   static uint32_t sensorInterval = 10000;
   static uint32_t previousSensorMillis = millis();
   if (millis() - previousSensorMillis >= sensorInterval)
@@ -101,4 +146,6 @@ void loop()
     Serial.println(payloadJson);
     client.publish(mqttCredential.publishTopic.c_str(), payloadJson);
   }
+
+  client.loop();
 }

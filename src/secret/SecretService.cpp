@@ -66,6 +66,7 @@ MqttCredentialModel SecretService::getMqttCredential()
     int port = doc["port"];
     String clientId = doc["clientId"];
     String publishTopic = doc["publishTopic"];
+    String subscribeTopic = doc["subscribeTopic"];
     mqttConfigFile.close();
-    return MqttCredentialModel(port, host, clientId, publishTopic);
+    return MqttCredentialModel(port, host, clientId, publishTopic, subscribeTopic);
 }

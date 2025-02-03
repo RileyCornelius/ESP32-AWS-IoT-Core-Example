@@ -9,12 +9,14 @@ public:
     String host;
     String clientId;
     String publishTopic;
+    String subscribeTopic;
 
-    MqttCredentialModel() : port(0), host(""), clientId(""), publishTopic("") {};
-    MqttCredentialModel(int port, String host, String clientId, String publishTopic) : port(port), host(host), clientId(clientId), publishTopic(publishTopic) {};
+    MqttCredentialModel() : port(0), host(""), clientId(""), publishTopic(""), subscribeTopic("") {};
+    MqttCredentialModel(int port, String host, String clientId, String publishTopic, String subscribeTopic)
+        : port(port), host(host), clientId(clientId), publishTopic(publishTopic), subscribeTopic(subscribeTopic) {};
 
     bool isEmpty()
     {
-        return port == 0 || host == "" || clientId == "" || publishTopic == "";
+        return port == 0 || host == "" || clientId == "" || publishTopic == "" || subscribeTopic == "";
     }
 };
