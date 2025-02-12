@@ -1,8 +1,8 @@
 #include <Arduino.h>
 #include <LittleFS.h>
-#include <PubSubClient.h>
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
+#include <MQTTClient.h>
 
 #include <Benchmark.h>
 #include <Timer.h>
@@ -11,7 +11,8 @@
 #include "secret/SecretService.h"
 
 WiFiClientSecure espClient;
-PubSubClient client(espClient);
+MQTTClient client;
+
 MqttCredentialModel mqttCredential;
 WifiCredentialModel wifiCredential;
 CertificateCredentialModel certificateCredential;
@@ -20,7 +21,7 @@ Payload payload;
 char *payloadJson;
 bool configLoaded = false;
 
-void messageHandler(char *topic, uint8_t *payload, unsigned int length)
+void messageHandler(String &topic, String &payload)
 {
   Serial.print("incoming: ");
   Serial.println(topic);
@@ -84,8 +85,8 @@ void connectAWS()
   espClient.setPrivateKey(certificateCredential.privateKey.c_str());
 
   // Set the server details and callback
-  client.setServer(mqttCredential.host.c_str(), mqttCredential.port);
-  client.setCallback(messageHandler);
+  client.begin(mqttCredential.host.c_str(), mqttCredential.port, espClient);
+  client.onMessage(messageHandler);
 
   while (!client.connected())
   {
@@ -98,14 +99,14 @@ void connectAWS()
     else
     {
       Serial.print("failed, rc=");
-      Serial.print(client.state());
+      Serial.print(client.lastError());
       Serial.println(" try again in 5 seconds");
       delay(5000);
     }
   }
 
   // Subscribe to topic
-  if (!client.subscribe(mqttCredential.subscribeTopic.c_str()))
+  if (!client.subscribe(mqttCredential.subscribeTopic))
   {
     Serial.println("Subscribe to topic failed");
   }
@@ -147,9 +148,10 @@ void loop()
     payloadJson = payload.toJson();
     Serial.println("Publish message: ");
     Serial.println(payloadJson);
-    // BENCHMARK_BEGIN(PUB);
-    client.publish(mqttCredential.publishTopic.c_str(), payloadJson);
-    // BENCHMARK_END(PUB); // 1.5ms
+    BENCHMARK_MICROS_BEGIN(PUB);
+    client.publish(mqttCredential.publishTopic.c_str(), payloadJson, (int)strlen(payloadJson), false, 0); // qos=0 - 1.0 ms
+    // client.publish(mqttCredential.publishTopic.c_str(), payloadJson, (int)strlen(payloadJson), false, 1); // qos=1 - 100 ms
+    BENCHMARK_MICROS_END(PUB);
   }
 
   client.loop();
