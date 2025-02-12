@@ -1,7 +1,12 @@
 #include <Arduino.h>
 #include <LittleFS.h>
 #include <PubSubClient.h>
+#include <WiFi.h>
 #include <WiFiClientSecure.h>
+
+#include <Benchmark.h>
+#include <Timer.h>
+
 #include "schema/Payload.h"
 #include "secret/SecretService.h"
 
@@ -132,11 +137,9 @@ void loop()
     return;
   }
 
-  static uint32_t sensorInterval = 10000;
-  static uint32_t previousSensorMillis = millis();
-  if (millis() - previousSensorMillis >= sensorInterval)
+  static Timer timer(10000);
+  if (timer.ready())
   {
-    previousSensorMillis = millis();
     float humidity = random(100);
     float temperature = random(100);
     payload.setHumidity(humidity, !isnan(humidity));
@@ -144,7 +147,9 @@ void loop()
     payloadJson = payload.toJson();
     Serial.println("Publish message: ");
     Serial.println(payloadJson);
+    // BENCHMARK_BEGIN(PUB);
     client.publish(mqttCredential.publishTopic.c_str(), payloadJson);
+    // BENCHMARK_END(PUB); // 1.5ms
   }
 
   client.loop();
