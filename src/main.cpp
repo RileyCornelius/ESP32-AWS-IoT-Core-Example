@@ -3,6 +3,7 @@
 #include <WiFi.h>
 #include <WiFiClientSecure.h>
 #include <MQTTClient.h>
+#include <WiFiManager.h>
 
 #include <Benchmark.h>
 #include <Timer.h>
@@ -11,15 +12,16 @@
 #include "secret/SecretService.h"
 
 WiFiClientSecure espClient;
-MQTTClient client;
+MQTTClient mqttClient;
+WiFiManager wifiManager;
 
 MqttCredentialModel mqttCredential;
 WifiCredentialModel wifiCredential;
 CertificateCredentialModel certificateCredential;
+SecretService configService(LittleFS);
 
 Payload payload;
 char *payloadJson;
-bool configLoaded = false;
 
 void messageHandler(String &topic, String &payload)
 {
@@ -32,22 +34,8 @@ void messageHandler(String &topic, String &payload)
   Serial.println(message);
 }
 
-bool loadConfigurationSecrets()
+bool loadAwsCredentials()
 {
-  if (!LittleFS.begin())
-  {
-    Serial.println("An Error has occurred while mounting LittleFS");
-    return false;
-  }
-
-  SecretService configService(LittleFS);
-  wifiCredential = configService.getWifiCredential();
-  if (wifiCredential.isEmpty())
-  {
-    Serial.println("Wifi credential is empty");
-    return false;
-  }
-
   mqttCredential = configService.getMqttCredential();
   if (mqttCredential.isEmpty())
   {
@@ -64,20 +52,50 @@ bool loadConfigurationSecrets()
   return true;
 }
 
-void connectWiFi()
+bool loadWifiCredentials()
 {
-  Serial.print("WiFi Connecting..");
+  wifiCredential = configService.getWifiCredential();
+  if (wifiCredential.isEmpty())
+  {
+    Serial.println("Wifi credential is empty");
+    return false;
+  }
+  return true;
+}
+
+void connectWiFiManager()
+{
+  WiFi.mode(WIFI_STA); // explicitly set mode, esp defaults to STA+AP
+  // wifiManager.setConfigPortalTimeout(60);
+  // wifiManager.setConfigPortalBlocking(false);
+  // wifiManager.resetSettings(); // uncomment to reset saved wifi ssid and password
+
+  Serial.print("WiFi Connecting...");
+  bool connected = wifiManager.autoConnect("WifiManagerAP"); // go to 192.168.4.1 once connected
+  if (connected)
+  {
+    Serial.println("WiFi connected");
+  }
+  else
+  {
+    Serial.println("Wifi failed to connect");
+  }
+}
+
+void connectWiFiManual()
+{
+  WiFi.mode(WIFI_STA); // explicitly set mode, esp defaults to STA+AP
   WiFi.begin(wifiCredential.ssid.c_str(), wifiCredential.password.c_str());
+  Serial.print("WiFi connecting..");
   while (WiFi.status() != WL_CONNECTED)
   {
     delay(250);
     Serial.print(".");
   }
-  Serial.println("");
   Serial.println("WiFi connected");
 }
 
-void connectAWS()
+void connectAwsMqtt()
 {
   // Set the certificates to the client
   espClient.setCACert(certificateCredential.ca.c_str());
@@ -85,28 +103,30 @@ void connectAWS()
   espClient.setPrivateKey(certificateCredential.privateKey.c_str());
 
   // Set the server details and callback
-  client.begin(mqttCredential.host.c_str(), mqttCredential.port, espClient);
-  client.onMessage(messageHandler);
+  mqttClient.begin(mqttCredential.host.c_str(), mqttCredential.port, espClient);
+  mqttClient.onMessage(messageHandler);
 
-  while (!client.connected())
+  uint8_t retries = 0;
+  while (!mqttClient.connected() && retries < 3)
   {
     Serial.println("AWS IoT Connecting...");
 
-    if (client.connect(mqttCredential.clientId.c_str()))
+    if (mqttClient.connect(mqttCredential.clientId.c_str()))
     {
       Serial.println("AWS IoT Connected");
     }
     else
     {
+      retries++;
       Serial.print("failed, rc=");
-      Serial.print(client.lastError());
+      Serial.print(mqttClient.lastError());
       Serial.println(" try again in 5 seconds");
       delay(5000);
     }
   }
 
   // Subscribe to topic
-  if (!client.subscribe(mqttCredential.subscribeTopic))
+  if (!mqttClient.subscribe(mqttCredential.subscribeTopic))
   {
     Serial.println("Subscribe to topic failed");
   }
@@ -117,23 +137,37 @@ void connectAWS()
 
 void setup()
 {
-  delay(3000); // Wait for Serial Monitor to connect
   Serial.begin(115200);
+  Serial.setDebugOutput(true);
+  delay(3000); // Wait for Serial Monitor to connect
+  Serial.println("Starting...");
 
-  configLoaded = loadConfigurationSecrets();
-  if (!configLoaded)
+  if (!LittleFS.begin())
   {
-    Serial.println("Failed to load configuration secrets");
-    return;
+    Serial.println("An Error has occurred while mounting LittleFS");
   }
 
-  connectWiFi();
-  connectAWS();
+  bool awsCredentialsLoaded = loadAwsCredentials();
+  bool wifiCredentialsLoaded = loadWifiCredentials();
+
+  if (wifiCredentialsLoaded)
+  {
+    connectWiFiManual();
+  }
+  else
+  {
+    connectWiFiManager();
+  }
+
+  if (awsCredentialsLoaded && WiFi.isConnected())
+  {
+    connectAwsMqtt();
+  }
 }
 
 void loop()
 {
-  if (!configLoaded)
+  if (!WiFi.isConnected() || !mqttClient.connected())
   {
     return;
   }
@@ -149,10 +183,10 @@ void loop()
     Serial.println("Publish message: ");
     Serial.println(payloadJson);
     BENCHMARK_MICROS_BEGIN(PUB);
-    client.publish(mqttCredential.publishTopic.c_str(), payloadJson, (int)strlen(payloadJson), false, 0); // qos=0 - 1.0 ms
-    // client.publish(mqttCredential.publishTopic.c_str(), payloadJson, (int)strlen(payloadJson), false, 1); // qos=1 - 100 ms
+    mqttClient.publish(mqttCredential.publishTopic.c_str(), payloadJson, (int)strlen(payloadJson), false, 0); // qos=0 - 1.0 ms
+    // mqttClient.publish(mqttCredential.publishTopic.c_str(), payloadJson, (int)strlen(payloadJson), false, 1); // qos=1 - 100 ms
     BENCHMARK_MICROS_END(PUB);
   }
 
-  client.loop();
+  mqttClient.loop();
 }
