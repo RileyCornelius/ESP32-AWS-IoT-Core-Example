@@ -53,13 +53,16 @@ bool loadWifiCredentials()
   return true;
 }
 
-void configTimeFromNtp()
+void configTimeNtp()
 {
   long timezone = -6;      // CST (utc+) TZ in hours
   uint8_t daysavetime = 0; // Is daylight saving time in effect? 1 = Yes, 0 = No
   Serial.println("Time server connecting...");
   configTime(timezone * 3600, daysavetime * 3600, "time.nist.gov", "0.pool.ntp.org", "1.pool.ntp.org");
-  Serial.println("Time server configured");
+  tm timeinfo;
+  getLocalTime(&timeinfo);
+  timeService.setTimeStruct(timeinfo);
+  Serial.printf("Time: %s\n", timeService.getDateTime().c_str());
 }
 
 void connectWiFiManager()
@@ -183,7 +186,7 @@ void setup()
 
   if (WiFi.isConnected())
   {
-    configTimeFromNtp();
+    configTimeNtp();
   }
 }
 
