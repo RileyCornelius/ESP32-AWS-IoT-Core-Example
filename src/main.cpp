@@ -12,6 +12,7 @@
 #include "schema/Payload.h"
 #include "secret/SecretService.h"
 
+#define BREAK_LINE "----------------------------------------"
 #define MQTT_MAX_PACKET_SIZE 512
 
 WiFiClientSecure espClient;
@@ -62,7 +63,7 @@ void configTimeNtp()
   tm timeinfo;
   getLocalTime(&timeinfo);
   timeService.setTimeStruct(timeinfo);
-  Serial.println("Timer server connected");
+  Serial.println("Time server connected");
   Serial.println(timeService.getDateTime(true));
 }
 
@@ -155,13 +156,12 @@ void setup()
   Serial.setDebugOutput(true);
   delay(3000); // Wait for Serial Monitor to connect
 
-  Serial.println("--------------------------------");
-  Serial.printf("SDK Version: %s\n", ESP.getSdkVersion());
-  Serial.printf("Free Heap: %d\n", ESP.getFreeHeap());
-  Serial.printf("Flash Chip Size: %d\n", ESP.getFlashChipSize());
+  Serial.println(BREAK_LINE);
+  Serial.printf("ESP SDK Version: %s\n", ESP.getSdkVersion());
+  Serial.printf("Arduino Core Version: v%d.%d.%d\n", ESP_ARDUINO_VERSION_MAJOR, ESP_ARDUINO_VERSION_MINOR, ESP_ARDUINO_VERSION_PATCH);
   Serial.printf("Sketch Size: %d\n", ESP.getSketchSize());
   Serial.printf("Free Sketch Space: %d\n", ESP.getFreeSketchSpace());
-  Serial.println("--------------------------------");
+  Serial.println(BREAK_LINE);
 
   if (!LittleFS.begin())
   {
@@ -189,7 +189,8 @@ void setup()
   {
     configTimeNtp();
   }
-  Serial.println("--------------------------------");
+
+  Serial.println(BREAK_LINE);
 }
 
 void loop()
@@ -218,4 +219,5 @@ void loop()
   }
 
   mqttClient.loop();
+  delay(1);
 }
