@@ -4,6 +4,7 @@
 #include <WiFiClientSecure.h>
 #include <MQTTClient.h>
 #include <WiFiManager.h>
+#include <ESP32Time.h>
 
 #include <Benchmark.h>
 #include <Timer.h>
@@ -11,25 +12,17 @@
 #include "schema/Payload.h"
 #include "secret/SecretService.h"
 
+#define MQTT_MAX_PACKET_SIZE 512
+
 WiFiClientSecure espClient;
-MQTTClient mqttClient;
+MQTTClient mqttClient(MQTT_MAX_PACKET_SIZE);
 WiFiManager wifiManager;
+ESP32Time timeService;
 
 MqttCredentialModel mqttCredential;
 WifiCredentialModel wifiCredential;
 CertificateCredentialModel certificateCredential;
 SecretService configService(LittleFS);
-
-void messageHandler(String &topic, String &payload)
-{
-  Serial.print("incoming: ");
-  Serial.println(topic);
-
-  StaticJsonDocument<200> doc;
-  deserializeJson(doc, payload);
-  const char *message = doc["message"];
-  Serial.println(message);
-}
 
 bool loadAwsCredentials()
 {
@@ -60,6 +53,15 @@ bool loadWifiCredentials()
   return true;
 }
 
+void configTimeFromNtp()
+{
+  long timezone = -6;      // CST (utc+) TZ in hours
+  uint8_t daysavetime = 0; // Is daylight saving time in effect? 1 = Yes, 0 = No
+  Serial.println("Time server connecting...");
+  configTime(timezone * 3600, daysavetime * 3600, "time.nist.gov", "0.pool.ntp.org", "1.pool.ntp.org");
+  Serial.println("Time server configured");
+}
+
 void connectWiFiManager()
 {
   WiFi.mode(WIFI_STA); // explicitly set mode, esp defaults to STA+AP
@@ -68,7 +70,8 @@ void connectWiFiManager()
   // wifiManager.resetSettings(); // uncomment to reset saved wifi ssid and password
 
   Serial.print("WiFi Connecting...");
-  bool connected = wifiManager.autoConnect("WifiManagerAP"); // go to 192.168.4.1 once connected
+  const char *STA_WIFI_NAME = "WifiManagerAP";
+  bool connected = wifiManager.autoConnect(STA_WIFI_NAME); // go to 192.168.4.1 once connected
   if (connected)
   {
     Serial.println("WiFi connected");
@@ -89,7 +92,19 @@ void connectWiFiManual()
     delay(250);
     Serial.print(".");
   }
+  Serial.println();
   Serial.println("WiFi connected");
+}
+
+void messageHandler(String &topic, String &payload)
+{
+  Serial.print("incoming: ");
+  Serial.println(topic);
+
+  StaticJsonDocument<200> doc;
+  deserializeJson(doc, payload);
+  const char *message = doc["message"];
+  Serial.println(message);
 }
 
 void connectAwsMqtt()
@@ -103,6 +118,7 @@ void connectAwsMqtt()
   mqttClient.begin(mqttCredential.host.c_str(), mqttCredential.port, espClient);
   mqttClient.onMessage(messageHandler);
 
+  // Connect to the MQTT broker
   uint8_t retries = 0;
   while (!mqttClient.connected() && retries < 3)
   {
@@ -134,7 +150,14 @@ void setup()
   Serial.begin(115200);
   Serial.setDebugOutput(true);
   delay(3000); // Wait for Serial Monitor to connect
-  Serial.println("Starting...");
+
+  Serial.println("--------------------------------");
+  Serial.printf("SDK Version: %s\n", ESP.getSdkVersion());
+  Serial.printf("Free Heap: %d\n", ESP.getFreeHeap());
+  Serial.printf("Flash Chip Size: %d\n", ESP.getFlashChipSize());
+  Serial.printf("Sketch Size: %d\n", ESP.getSketchSize());
+  Serial.printf("Free Sketch Space: %d\n", ESP.getFreeSketchSpace());
+  Serial.println("--------------------------------");
 
   if (!LittleFS.begin())
   {
@@ -157,6 +180,11 @@ void setup()
   {
     connectAwsMqtt();
   }
+
+  if (WiFi.isConnected())
+  {
+    configTimeFromNtp();
+  }
 }
 
 void loop()
@@ -170,16 +198,17 @@ void loop()
   if (timer.ready())
   {
     Payload payload;
+    payload.timestamp = timeService.getDateTime();
     payload.clientId = mqttCredential.clientId;
     payload.deviceId = WiFi.macAddress();
     payload.humidity = random(100);
     payload.temperature = random(100);
     const char *payloadJson = payload.toJson();
-
     Serial.println("Publish message: ");
     Serial.println(payloadJson);
+
     BENCHMARK_MICROS_BEGIN(PUB);
-    mqttClient.publish(mqttCredential.publishTopic.c_str(), payloadJson, strlen(payloadJson), false, 0); // qos=0 - 1.0 ms
+    mqttClient.publish(mqttCredential.publishTopic.c_str(), payloadJson, strlen(payloadJson)); // qos=0 - 1.0 ms
     // mqttClient.publish(mqttCredential.publishTopic.c_str(), payloadJson, strlen(payloadJson), false, 1); // qos=1 - 100 ms
     BENCHMARK_MICROS_END(PUB);
   }

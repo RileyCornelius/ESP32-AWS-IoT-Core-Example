@@ -7,9 +7,9 @@ class Payload
 {
 private:
     char jsonStr[512];
-    uint32_t jsonLength = 0;
 
 public:
+    String timestamp = "";
     String clientId = "";
     String deviceId = "";
     float humidity = 0;
@@ -17,19 +17,18 @@ public:
 
     const char *toJson()
     {
-        DynamicJsonDocument doc(256);
+        DynamicJsonDocument doc(512);
+        doc["timestamp"] = timestamp;
         doc["clientId"] = clientId;
         doc["deviceId"] = deviceId;
         doc["humidity"] = humidity;
         doc["temperature"] = temperature;
         serializeJson(doc, jsonStr, sizeof(jsonStr));
-        jsonLength = strlen(jsonStr);
         return jsonStr;
     }
 
     uint32_t length()
     {
-        assert(jsonLength > 0);
-        return jsonLength;
+        return strlen(jsonStr);
     }
 };
