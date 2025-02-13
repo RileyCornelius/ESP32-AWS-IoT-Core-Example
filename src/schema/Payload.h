@@ -6,62 +6,30 @@
 class Payload
 {
 private:
-    String clientId = "";
-    bool isClientIdValid = false;
-    float humidity = 0;
-    bool isHumidityValid = false;
-    float temperature = 0;
-    bool isTemperatureValid = false;
+    char jsonStr[512];
+    uint32_t jsonLength = 0;
 
 public:
-    void setClientId(String clientId, bool isClientIdValid)
-    {
-        this->clientId = clientId;
-        this->isClientIdValid = isClientIdValid;
-    };
+    String clientId = "";
+    String deviceId = "";
+    float humidity = 0;
+    float temperature = 0;
 
-    void setHumidity(float humidity, bool isHumidityValid)
+    const char *toJson()
     {
-        this->humidity = humidity;
-        this->isHumidityValid = isHumidityValid;
-    };
-
-    void setTemperature(float temperature, bool isTemperatureValid)
-    {
-        this->temperature = temperature;
-        this->isTemperatureValid = isTemperatureValid;
-    };
-
-    char *toJson()
-    {
-        static char buffer[512];
         DynamicJsonDocument doc(256);
-        if (isClientIdValid)
-        {
-            doc["clientId"] = clientId;
-        }
-        else
-        {
-            doc["clientId"] = nullptr;
-        }
-        if (isHumidityValid)
-        {
-            doc["humidity"] = humidity;
-        }
-        else
-        {
-            doc["humidity"] = nullptr;
-        }
-        if (isTemperatureValid)
-        {
-            doc["temperature"] = temperature;
-        }
-        else
-        {
-            doc["temperature"] = nullptr;
-        }
+        doc["clientId"] = clientId;
+        doc["deviceId"] = deviceId;
+        doc["humidity"] = humidity;
+        doc["temperature"] = temperature;
+        serializeJson(doc, jsonStr, sizeof(jsonStr));
+        jsonLength = strlen(jsonStr);
+        return jsonStr;
+    }
 
-        serializeJson(doc, buffer);
-        return buffer;
-    };
+    uint32_t length()
+    {
+        assert(jsonLength > 0);
+        return jsonLength;
+    }
 };

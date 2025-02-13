@@ -20,9 +20,6 @@ WifiCredentialModel wifiCredential;
 CertificateCredentialModel certificateCredential;
 SecretService configService(LittleFS);
 
-Payload payload;
-char *payloadJson;
-
 void messageHandler(String &topic, String &payload)
 {
   Serial.print("incoming: ");
@@ -130,9 +127,6 @@ void connectAwsMqtt()
   {
     Serial.println("Subscribe to topic failed");
   }
-
-  // Setup payload with clientId
-  payload.setClientId(mqttCredential.clientId, true);
 }
 
 void setup()
@@ -175,16 +169,18 @@ void loop()
   static Timer timer(10000);
   if (timer.ready())
   {
-    float humidity = random(100);
-    float temperature = random(100);
-    payload.setHumidity(humidity, !isnan(humidity));
-    payload.setTemperature(temperature, !isnan(temperature));
-    payloadJson = payload.toJson();
+    Payload payload;
+    payload.clientId = mqttCredential.clientId;
+    payload.deviceId = WiFi.macAddress();
+    payload.humidity = random(100);
+    payload.temperature = random(100);
+    const char *payloadJson = payload.toJson();
+
     Serial.println("Publish message: ");
     Serial.println(payloadJson);
     BENCHMARK_MICROS_BEGIN(PUB);
-    mqttClient.publish(mqttCredential.publishTopic.c_str(), payloadJson, (int)strlen(payloadJson), false, 0); // qos=0 - 1.0 ms
-    // mqttClient.publish(mqttCredential.publishTopic.c_str(), payloadJson, (int)strlen(payloadJson), false, 1); // qos=1 - 100 ms
+    mqttClient.publish(mqttCredential.publishTopic.c_str(), payloadJson, strlen(payloadJson), false, 0); // qos=0 - 1.0 ms
+    // mqttClient.publish(mqttCredential.publishTopic.c_str(), payloadJson, strlen(payloadJson), false, 1); // qos=1 - 100 ms
     BENCHMARK_MICROS_END(PUB);
   }
 
