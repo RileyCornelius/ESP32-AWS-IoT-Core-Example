@@ -62,7 +62,8 @@ void configTimeNtp()
   tm timeinfo;
   getLocalTime(&timeinfo);
   timeService.setTimeStruct(timeinfo);
-  Serial.printf("Time: %s\n", timeService.getDateTime().c_str());
+  Serial.println("Timer server connected");
+  Serial.println(timeService.getDateTime(true));
 }
 
 void connectWiFiManager()
@@ -188,6 +189,7 @@ void setup()
   {
     configTimeNtp();
   }
+  Serial.println("--------------------------------");
 }
 
 void loop()
@@ -200,20 +202,19 @@ void loop()
   static Timer timer(10000);
   if (timer.ready())
   {
-    Payload payload;
-    payload.timestamp = timeService.getDateTime();
+    static Payload payload;
+    payload.timestamp = timeService.getTime("%Y-%m-%d %H:%M:%S");
     payload.clientId = mqttCredential.clientId;
     payload.deviceId = WiFi.macAddress();
     payload.humidity = random(100);
     payload.temperature = random(100);
     const char *payloadJson = payload.toJson();
-    Serial.println("Publish message: ");
-    Serial.println(payloadJson);
 
-    BENCHMARK_MICROS_BEGIN(PUB);
+    Serial.printf("Publish: %s\n", payloadJson);
+    BENCHMARK_MICROS_BEGIN(Publish);
     mqttClient.publish(mqttCredential.publishTopic.c_str(), payloadJson, strlen(payloadJson)); // qos=0 - 1.0 ms
     // mqttClient.publish(mqttCredential.publishTopic.c_str(), payloadJson, strlen(payloadJson), false, 1); // qos=1 - 100 ms
-    BENCHMARK_MICROS_END(PUB);
+    BENCHMARK_MICROS_END(Publish);
   }
 
   mqttClient.loop();
