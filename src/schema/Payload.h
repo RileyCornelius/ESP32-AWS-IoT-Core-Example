@@ -17,13 +17,13 @@ public:
 
     const char *toJson()
     {
-        DynamicJsonDocument doc(512);
+        JsonDocument doc;
         doc["timestamp"] = timestamp;
         doc["clientId"] = clientId;
         doc["deviceId"] = deviceId;
         doc["humidity"] = humidity;
         doc["temperature"] = temperature;
-        serializeJson(doc, jsonStr, sizeof(jsonStr));
+        serializeJson(doc, jsonStr);
         return jsonStr;
     }
 

@@ -12,7 +12,9 @@ String readFile(fs::FS &fs, const char *path)
         Serial.printf("Failed to open file: %s\r\n", path);
         return "";
     }
-    return file.readString();
+    String content = file.readString();
+    file.close();
+    return content;
 }
 
 CertificateCredentialModel SecretService::getCertificateCredential()
@@ -32,7 +34,7 @@ WifiCredentialModel SecretService::getWifiCredential()
         Serial.println("Failed to open wifi_config.json file");
         return WifiCredentialModel();
     }
-    DynamicJsonDocument doc(1024);
+    JsonDocument doc;
     DeserializationError error = deserializeJson(doc, wifiConfigFile);
     if (error)
     {
@@ -55,7 +57,7 @@ MqttCredentialModel SecretService::getMqttCredential()
         Serial.println("Failed to open mqtt_config.json file");
         return MqttCredentialModel();
     }
-    DynamicJsonDocument doc(1024);
+    JsonDocument doc;
     DeserializationError error = deserializeJson(doc, mqttConfigFile);
     if (error)
     {

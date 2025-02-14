@@ -15,7 +15,7 @@
 #define BREAK_LINE "----------------------------------------"
 #define MQTT_MAX_PACKET_SIZE 512
 
-WiFiClientSecure espClient;
+WiFiClientSecure sslClient;
 MQTTClient mqttClient(MQTT_MAX_PACKET_SIZE);
 WiFiManager wifiManager;
 ESP32Time timeService;
@@ -106,7 +106,7 @@ void messageHandler(String &topic, String &payload)
   Serial.print("incoming: ");
   Serial.println(topic);
 
-  StaticJsonDocument<200> doc;
+  JsonDocument doc;
   deserializeJson(doc, payload);
   const char *message = doc["message"];
   Serial.println(message);
@@ -115,12 +115,12 @@ void messageHandler(String &topic, String &payload)
 void connectAwsMqtt()
 {
   // Set the certificates to the client
-  espClient.setCACert(certificateCredential.ca.c_str());
-  espClient.setCertificate(certificateCredential.certificate.c_str());
-  espClient.setPrivateKey(certificateCredential.privateKey.c_str());
+  sslClient.setCACert(certificateCredential.ca.c_str());
+  sslClient.setCertificate(certificateCredential.certificate.c_str());
+  sslClient.setPrivateKey(certificateCredential.privateKey.c_str());
 
   // Set the server details and callback
-  mqttClient.begin(mqttCredential.host.c_str(), mqttCredential.port, espClient);
+  mqttClient.begin(mqttCredential.host.c_str(), mqttCredential.port, sslClient);
   mqttClient.onMessage(messageHandler);
 
   // Connect to the MQTT broker
