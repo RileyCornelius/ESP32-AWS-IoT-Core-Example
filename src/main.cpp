@@ -9,7 +9,8 @@
 #include <Benchmark.h>
 #include <Timer.h>
 
-#include "schema/Payload.h"
+#include "schema/SensorPayload.h"
+#include "schema/CalibrationPayload.h"
 #include "secret/SecretService.h"
 
 #define BREAK_LINE "----------------------------------------"
@@ -54,16 +55,25 @@ bool loadWifiCredentials()
   return true;
 }
 
+// List of timezones: https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
+#define TIMEZONE_WINNIPEG "CST6CDT,M3.2.0,M11.1.0" // America/Winnipeg timezone
+#define TIMEZONE_UTC "UTC0"                        // Universal Time Coordinated timezone
+#define TIME_SERVER_1 "0.ca.pool.ntp.org"
+#define TIME_SERVER_2 "0.pool.ntp.org"
+#define TIME_SERVER_3 "1.pool.ntp.org"
 void configTimeNtp()
 {
-  long timezone = -6;      // CST (utc+) TZ in hours
-  uint8_t daysavetime = 0; // Is daylight saving time in effect? 1 = Yes, 0 = No
   Serial.println("Time server connecting...");
-  configTime(timezone * 3600, daysavetime * 3600, "time.nist.gov", "0.pool.ntp.org", "1.pool.ntp.org");
   tm timeinfo;
-  getLocalTime(&timeinfo);
-  timeService.setTimeStruct(timeinfo);
-  Serial.println("Time server connected");
+  configTzTime(TIMEZONE_WINNIPEG, TIME_SERVER_1, TIME_SERVER_2, TIME_SERVER_3);
+  if (getLocalTime(&timeinfo, 10000)) // wait up to 10 sec to sync
+  {
+    Serial.println("Time server connected");
+  }
+  else
+  {
+    Serial.println("Failed to get time from server");
+  }
   Serial.println(timeService.getDateTime(true));
 }
 
@@ -203,7 +213,25 @@ void loop()
   static Timer timer(10000);
   if (timer.ready())
   {
-    static Payload payload;
+    static bool firstTime = true;
+    if (firstTime)
+    {
+      firstTime = false;
+      CalibrationPayload calibrationPayload;
+      calibrationPayload.timestamp = timeService.getTime("%Y-%m-%d %H:%M:%S");
+      calibrationPayload.userId = "TestUser";
+      calibrationPayload.deviceId = WiFi.macAddress();
+      calibrationPayload.calibration = random(100);
+
+      BENCHMARK_MICROS_BEGIN(Json);
+      const char *calibrationJson = calibrationPayload.toJson();
+      BENCHMARK_MICROS_END(Json);
+      Serial.printf("Json: %s\n", calibrationJson);
+
+      mqttClient.publish(mqttCredential.publishTopic.c_str(), calibrationJson, strlen(calibrationJson));
+    }
+
+    static SensorPayload payload;
     payload.timestamp = timeService.getTime("%Y-%m-%d %H:%M:%S");
     payload.clientId = mqttCredential.clientId;
     payload.deviceId = WiFi.macAddress();
@@ -219,5 +247,4 @@ void loop()
   }
 
   mqttClient.loop();
-  delay(1);
 }

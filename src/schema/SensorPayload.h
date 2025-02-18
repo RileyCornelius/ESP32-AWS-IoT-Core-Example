@@ -3,7 +3,7 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 
-class Payload
+class SensorPayload
 {
 private:
     char jsonStr[512];
