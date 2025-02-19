@@ -4,7 +4,6 @@
 #include <WiFiClientSecure.h>
 #include <MQTTClient.h>
 #include <WiFiManager.h>
-#include <ESP32Time.h>
 
 #include <Benchmark.h>
 #include <Timer.h>
@@ -16,10 +15,15 @@
 #define BREAK_LINE "----------------------------------------"
 #define MQTT_MAX_PACKET_SIZE 512
 
+#define TIMEZONE_WINNIPEG "CST6CDT,M3.2.0,M11.1.0" // America/Winnipeg timezone - List of timezones: https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
+#define TIMEZONE_UTC "UTC0"                        // Universal Time Coordinated timezone
+#define TIME_SERVER_1 "0.pool.ntp.org"
+#define TIME_SERVER_2 "1.pool.ntp.org"
+#define TIME_SERVER_3 "2.pool.ntp.org"
+
 WiFiClientSecure sslClient;
 MQTTClient mqttClient(MQTT_MAX_PACKET_SIZE);
 WiFiManager wifiManager;
-ESP32Time timeService;
 
 MqttCredentialModel mqttCredential;
 WifiCredentialModel wifiCredential;
@@ -55,12 +59,19 @@ bool loadWifiCredentials()
   return true;
 }
 
-// List of timezones: https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
-#define TIMEZONE_WINNIPEG "CST6CDT,M3.2.0,M11.1.0" // America/Winnipeg timezone
-#define TIMEZONE_UTC "UTC0"                        // Universal Time Coordinated timezone
-#define TIME_SERVER_1 "0.ca.pool.ntp.org"
-#define TIME_SERVER_2 "0.pool.ntp.org"
-#define TIME_SERVER_3 "1.pool.ntp.org"
+String getTimestampString()
+{
+  timeval tv;
+  gettimeofday(&tv, NULL);
+  time_t now = tv.tv_sec;
+  tm ts = *localtime(&now);
+  char buf[100];
+  sprintf(buf, "%04d-%02d-%02dT%02d:%02d:%02d.%02ldZ", // ISO 8601 format
+          ts.tm_year + 1900, ts.tm_mon + 1, ts.tm_mday,
+          ts.tm_hour, ts.tm_min, ts.tm_sec, tv.tv_usec);
+  return String(buf);
+}
+
 void configTimeNtp()
 {
   Serial.println("Time server connecting...");
@@ -74,7 +85,7 @@ void configTimeNtp()
   {
     Serial.println("Failed to get time from server");
   }
-  Serial.println(timeService.getDateTime(true));
+  Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
 }
 
 void connectWiFiManager()
@@ -218,7 +229,7 @@ void loop()
     {
       firstTime = false;
       CalibrationPayload calibrationPayload;
-      calibrationPayload.timestamp = timeService.getTime("%Y-%m-%d %H:%M:%S");
+      calibrationPayload.timestamp = getTimestampString();
       calibrationPayload.userId = "TestUser";
       calibrationPayload.deviceId = WiFi.macAddress();
       calibrationPayload.calibration = random(100);
@@ -232,7 +243,7 @@ void loop()
     }
 
     static SensorPayload payload;
-    payload.timestamp = timeService.getTime("%Y-%m-%d %H:%M:%S");
+    payload.timestamp = getTimestampString();
     payload.clientId = mqttCredential.clientId;
     payload.deviceId = WiFi.macAddress();
     payload.humidity = random(100);
