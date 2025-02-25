@@ -88,6 +88,20 @@ void configTimeNtp()
   Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
 }
 
+void connectWiFiManual()
+{
+  WiFi.mode(WIFI_STA); // explicitly set mode, esp defaults to STA+AP
+  WiFi.begin(wifiCredential.ssid.c_str(), wifiCredential.password.c_str());
+  Serial.print("WiFi connecting..");
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    delay(250);
+    Serial.print(".");
+  }
+  Serial.println();
+  Serial.println("WiFi connected");
+}
+
 void connectWiFiManager()
 {
   WiFi.mode(WIFI_STA); // explicitly set mode, esp defaults to STA+AP
@@ -106,20 +120,6 @@ void connectWiFiManager()
   {
     Serial.println("Wifi failed to connect");
   }
-}
-
-void connectWiFiManual()
-{
-  WiFi.mode(WIFI_STA); // explicitly set mode, esp defaults to STA+AP
-  WiFi.begin(wifiCredential.ssid.c_str(), wifiCredential.password.c_str());
-  Serial.print("WiFi connecting..");
-  while (WiFi.status() != WL_CONNECTED)
-  {
-    delay(250);
-    Serial.print(".");
-  }
-  Serial.println();
-  Serial.println("WiFi connected");
 }
 
 void messageHandler(String &topic, String &payload)
@@ -211,6 +211,19 @@ void setup()
     configTimeNtp();
   }
 
+  CalibrationPayload calibrationPayload;
+  calibrationPayload.timestamp = getTimestampString();
+  calibrationPayload.userId = "TestUser";
+  calibrationPayload.deviceId = WiFi.macAddress();
+  calibrationPayload.calibration = random(100);
+
+  BENCHMARK_MICROS_BEGIN(Json);
+  const char *calibrationJson = calibrationPayload.toJson();
+  BENCHMARK_MICROS_END(Json);
+  Serial.printf("Json: %s\n", calibrationJson);
+
+  mqttClient.publish(mqttCredential.publishTopic.c_str(), calibrationJson, strlen(calibrationJson));
+
   Serial.println(BREAK_LINE);
 }
 
@@ -221,27 +234,9 @@ void loop()
     return;
   }
 
-  static Timer timer(10000);
+  static Timer timer(10'000);
   if (timer.ready())
   {
-    static bool firstTime = true;
-    if (firstTime)
-    {
-      firstTime = false;
-      CalibrationPayload calibrationPayload;
-      calibrationPayload.timestamp = getTimestampString();
-      calibrationPayload.userId = "TestUser";
-      calibrationPayload.deviceId = WiFi.macAddress();
-      calibrationPayload.calibration = random(100);
-
-      BENCHMARK_MICROS_BEGIN(Json);
-      const char *calibrationJson = calibrationPayload.toJson();
-      BENCHMARK_MICROS_END(Json);
-      Serial.printf("Json: %s\n", calibrationJson);
-
-      mqttClient.publish(mqttCredential.publishTopic.c_str(), calibrationJson, strlen(calibrationJson));
-    }
-
     static SensorPayload payload;
     payload.timestamp = getTimestampString();
     payload.clientId = mqttCredential.clientId;
