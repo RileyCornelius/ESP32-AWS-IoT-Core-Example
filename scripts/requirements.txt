@@ -1,0 +1,5 @@
+# pip install -r requirements.txt
+
+boto3==1.37.4
+dotenv==0.9.9
+requests==2.32.3

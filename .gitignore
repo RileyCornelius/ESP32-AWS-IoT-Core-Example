@@ -8,3 +8,6 @@
 /data/certs/*.key
 /data/certs/*.crt
 /data/config/*.json
+
+/scripts/.env
+/scripts/certs/
