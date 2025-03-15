@@ -23,17 +23,22 @@ After changing the name of the files We have 3 files to use in our project:
 - `private.pem.key`
 - `AmazonRootCA1.pem`
 
-## Configuring ESP32 Filesystem for AWS IoT Core Connection
+## Add AWS IoT Core Certificates to the Project
 
-In this part, We're going to configure the ESP32 filesystem to connect to AWS IoT Core. We'll use the LittleFS file system to store the SSL certificates and the AWS IoT Core endpoint.
+Once you have the certificates renamed copy them into the `certs` folder. This folder should be located in the root directory of your project. 
+
+**Note**: The `/certs` folder must be in the root directory of your project but could be rename if subsequent code is also changed. Learn more about [Embedding Binary Data and ESP32 File System](https://docs.platformio.org/en/latest/platforms/espressif32.html#uploading-files-to-file-system).
+
+
+## Configuring ESP32 Filesystem for MQTT and WiFi 
+
+In this part, we're going to configure the ESP32 filesystem to store the AWS IoT Core endpoint and wifi credentials.
 
 In the root directory of your project, there is a folder called `data`. This folder will contain all the files we need to store in the ESP32 filesystem.
 
-**Note**: The `data` folder must be in the root directory of your project. Otherwise, the ESP32 will not be able to find the files.
+**Note**: The `/data` folder must be in the root directory of your project and must be called data. Otherwise, the ESP32 will not be able to find the files.
 
-Copy the renamed credential files into` /data/certs`
-
-[![data folder](https://imgur.com/LDk00Aj.png)
+[![data folder](https://i.imgur.com/jZyfmWf.png)
 
 #### Create MQTT and WiFi Configs
 
@@ -82,16 +87,31 @@ To build Filesystem Image We need to run Build Filesystem Image task:
 
 [![Build FileSystem Image](https://media2.dev.to/dynamic/image/width=800%2Cheight=%2Cfit=scale-down%2Cgravity=auto%2Cformat=auto/https%3A%2F%2Fdev-to-uploads.s3.amazonaws.com%2Fuploads%2Farticles%2F7jc1uuersr3xlolzp006.png)](https://media2.dev.to/dynamic/image/width=800%2Cheight=%2Cfit=scale-down%2Cgravity=auto%2Cformat=auto/https%3A%2F%2Fdev-to-uploads.s3.amazonaws.com%2Fuploads%2Farticles%2F7jc1uuersr3xlolzp006.png)
 
-After the Clicking the Build Filesystem Image task, We can see the following output in the terminal:
-
-[![Build FileSystem Image Output](https://media2.dev.to/dynamic/image/width=800%2Cheight=%2Cfit=scale-down%2Cgravity=auto%2Cformat=auto/https%3A%2F%2Fdev-to-uploads.s3.amazonaws.com%2Fuploads%2Farticles%2F6fz32aefmw3v1kgqz9z1.png)](https://media2.dev.to/dynamic/image/width=800%2Cheight=%2Cfit=scale-down%2Cgravity=auto%2Cformat=auto/https%3A%2F%2Fdev-to-uploads.s3.amazonaws.com%2Fuploads%2Farticles%2F6fz32aefmw3v1kgqz9z1.png)
 Now You can upload the filesystem image to the esp32. To do this, We need to run the Upload Filesystem Image task:
 
 The output of the Upload Filesystem Image task is as follows:
 
 [![Upload FileSystem Image Output](https://media2.dev.to/dynamic/image/width=800%2Cheight=%2Cfit=scale-down%2Cgravity=auto%2Cformat=auto/https%3A%2F%2Fdev-to-uploads.s3.amazonaws.com%2Fuploads%2Farticles%2Fibgh3pec3yk5j3foqgc9.png)](https://media2.dev.to/dynamic/image/width=800%2Cheight=%2Cfit=scale-down%2Cgravity=auto%2Cformat=auto/https%3A%2F%2Fdev-to-uploads.s3.amazonaws.com%2Fuploads%2Farticles%2Fibgh3pec3yk5j3foqgc9.png)
+
 Now run `Upload and Monitor`, to upload the firmware and view the serial monitor. 
 
-It should look look like this if everything worked correctly.
+## Conclusion
 
-![Serial Prints](https://i.imgur.com/r4he73D.png)
+If everything is set up correctly, your ESP32 should now be successfully connecting to AWS IoT Core. You should see connection logs in the serial monitor, and your device will be publishing data to the specified topic. You can verify this by checking the AWS IoT Core MQTT test client to confirm messages are being received.
+
+### Troubleshooting
+
+If you encounter connectivity issues:
+- Double-check that your certificates are named correctly and placed in the `certs` folder
+- Verify your WiFi credentials in the `wifi_config.json` file
+- Ensure your AWS IoT Core endpoint is correct in the `mqtt_config.json` file
+- Confirm your IoT policy has the necessary permissions for your device
+
+### Next Steps
+
+Now that your ESP32 is connected to AWS IoT Core, you can:
+- Set up AWS IoT Rules to process and route your sensor data to a database
+- Implement additional sensors or actuators controlled via MQTT messages
+- Develop a mobile or web application to interact with your device
+
+
