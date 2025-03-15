@@ -2,17 +2,16 @@
 
 #include <Arduino.h>
 
-class MqttCredentialModel
+struct MqttCredential
 {
-public:
     int port;
     String host;
     String clientId;
     String publishTopic;
     String subscribeTopic;
 
-    MqttCredentialModel() : port(0), host(""), clientId(""), publishTopic(""), subscribeTopic("") {};
-    MqttCredentialModel(int port, String host, String clientId, String publishTopic, String subscribeTopic)
+    MqttCredential() : port(0), host(""), clientId(""), publishTopic(""), subscribeTopic("") {};
+    MqttCredential(int port, String host, String clientId, String publishTopic, String subscribeTopic)
         : port(port), host(host), clientId(clientId), publishTopic(publishTopic), subscribeTopic(subscribeTopic) {};
 
     bool isEmpty()

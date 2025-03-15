@@ -8,8 +8,8 @@
 #include <Benchmark.h>
 #include <Timer.h>
 
-#include "schema/SensorPayload.h"
-#include "secret/SecretService.h"
+#include "Playload/SensorPayload.h"
+#include "CredentialManager/CredentialManager.h"
 
 #define BREAK_LINE "----------------------------------------"
 #define MQTT_MAX_PACKET_SIZE 512
@@ -24,21 +24,21 @@ WiFiClientSecure sslClient;
 MQTTClient mqttClient(MQTT_MAX_PACKET_SIZE);
 WiFiManager wifiManager;
 
-MqttCredentialModel mqttCredential;
-WifiCredentialModel wifiCredential;
-CertificateCredentialModel certificateCredential;
-SecretService configService(LittleFS);
+MqttCredential mqttCredential;
+WifiCredential wifiCredential;
+CertificateCredential certificateCredential;
+CredentialManager credentialManager(LittleFS);
 
 bool loadAwsCredentials()
 {
-  mqttCredential = configService.getMqttCredential();
+  mqttCredential = credentialManager.getMqttCredential();
   if (mqttCredential.isEmpty())
   {
     Serial.println("Mqtt credential is empty");
     return false;
   }
 
-  certificateCredential = configService.getCertificateCredential();
+  certificateCredential = credentialManager.getCertificateCredential();
   if (certificateCredential.isEmpty())
   {
     Serial.println("Certificate credential is empty");
@@ -50,7 +50,7 @@ bool loadAwsCredentials()
 
 bool loadWifiCredentials()
 {
-  wifiCredential = configService.getWifiCredential();
+  wifiCredential = credentialManager.getWifiCredential();
   if (wifiCredential.isEmpty())
   {
     Serial.println("Wifi credential is empty");
@@ -210,19 +210,6 @@ void setup()
   {
     configTimeNtp();
   }
-
-  CalibrationPayload calibrationPayload;
-  calibrationPayload.timestamp = getTimestampString();
-  calibrationPayload.userId = "TestUser";
-  calibrationPayload.deviceId = WiFi.macAddress();
-  calibrationPayload.calibration = random(100);
-
-  BENCHMARK_MICROS_BEGIN(Json);
-  const char *calibrationJson = calibrationPayload.toJson();
-  BENCHMARK_MICROS_END(Json);
-  Serial.printf("Json: %s\n", calibrationJson);
-
-  mqttClient.publish(mqttCredential.publishTopic.c_str(), calibrationJson, strlen(calibrationJson));
 
   Serial.println(BREAK_LINE);
 }
