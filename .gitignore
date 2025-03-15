@@ -4,10 +4,10 @@
 .vscode/launch.json
 .vscode/ipch
 
-/data/certs/*.pem
-/data/certs/*.key
-/data/certs/*.crt
-/data/config/*.json
+/certs/*.pem
+/certs/*.key
+/certs/*.crt
+/data/*.json
 
 /scripts/.env
 /scripts/certs/

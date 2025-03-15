@@ -9,7 +9,6 @@
 #include <Timer.h>
 
 #include "schema/SensorPayload.h"
-#include "schema/CalibrationPayload.h"
 #include "secret/SecretService.h"
 
 #define BREAK_LINE "----------------------------------------"
@@ -45,6 +44,7 @@ bool loadAwsCredentials()
     Serial.println("Certificate credential is empty");
     return false;
   }
+
   return true;
 }
 
@@ -136,9 +136,9 @@ void messageHandler(String &topic, String &payload)
 void connectAwsMqtt()
 {
   // Set the certificates to the client
-  sslClient.setCACert(certificateCredential.ca.c_str());
-  sslClient.setCertificate(certificateCredential.certificate.c_str());
-  sslClient.setPrivateKey(certificateCredential.privateKey.c_str());
+  sslClient.setCACert(certificateCredential.ca);
+  sslClient.setCertificate(certificateCredential.certificate);
+  sslClient.setPrivateKey(certificateCredential.privateKey);
 
   // Set the server details and callback
   mqttClient.begin(mqttCredential.host.c_str(), mqttCredential.port, sslClient);

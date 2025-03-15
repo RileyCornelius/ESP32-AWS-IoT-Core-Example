@@ -27,6 +27,24 @@ public:
         return jsonStr;
     }
 
+    bool fromJson(const char *json)
+    {
+        JsonDocument doc;
+        DeserializationError error = deserializeJson(doc, json);
+        if (error)
+        {
+            Serial.print(F("deserializeJson() failed: "));
+            Serial.println(error.f_str());
+            return false;
+        }
+        timestamp = doc["timestamp"].as<String>();
+        clientId = doc["clientId"].as<String>();
+        deviceId = doc["deviceId"].as<String>();
+        humidity = doc["humidity"].as<float>();
+        temperature = doc["temperature"].as<float>();
+        return true;
+    }
+
     uint32_t length()
     {
         return strlen(jsonStr);
