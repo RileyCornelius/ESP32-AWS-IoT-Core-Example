@@ -27,7 +27,12 @@ String CredentialManager::readFile(const char *path)
 
 CertificateCredential CredentialManager::getCertificateCredential()
 {
-    return CertificateCredential(aws_root_ca_pem_start, certificate_pem_crt_start, private_pem_key_start);
+    CertificateCredential certificateCredential = {
+        .ca = aws_root_ca_pem_start,
+        .certificate = certificate_pem_crt_start,
+        .privateKey = private_pem_key_start,
+    };
+    return certificateCredential;
 }
 
 WifiCredential CredentialManager::getWifiCredential()
@@ -41,16 +46,17 @@ WifiCredential CredentialManager::getWifiCredential()
     }
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, wifiConfigFile);
+    wifiConfigFile.close();
     if (error)
     {
         Serial.println("Failed to read file, using default configuration");
-        wifiConfigFile.close();
         return WifiCredential();
     }
-    String ssid = doc["ssid"];
-    String password = doc["password"];
-    wifiConfigFile.close();
-    return WifiCredential(ssid, password);
+    WifiCredential wifiCredential = {
+        .ssid = doc["ssid"],
+        .password = doc["password"],
+    };
+    return wifiCredential;
 }
 
 MqttCredential CredentialManager::getMqttCredential()
@@ -64,17 +70,18 @@ MqttCredential CredentialManager::getMqttCredential()
     }
     JsonDocument doc;
     DeserializationError error = deserializeJson(doc, mqttConfigFile);
+    mqttConfigFile.close();
     if (error)
     {
         Serial.println("Failed to read file, using default configuration");
-        mqttConfigFile.close();
         return MqttCredential();
     }
-    int port = doc["port"];
-    String host = doc["host"];
-    String clientId = doc["clientId"];
-    String publishTopic = doc["publishTopic"];
-    String subscribeTopic = doc["subscribeTopic"];
-    mqttConfigFile.close();
-    return MqttCredential(port, host, clientId, publishTopic, subscribeTopic);
+    MqttCredential mqttCredential = {
+        .port = doc["port"],
+        .host = doc["host"],
+        .clientId = doc["clientId"],
+        .publishTopic = doc["publishTopic"],
+        .subscribeTopic = doc["subscribeTopic"],
+    };
+    return mqttCredential;
 }

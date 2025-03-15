@@ -4,15 +4,12 @@
 
 struct CertificateCredential
 {
-    const char *ca;
-    const char *certificate;
-    const char *privateKey;
-
-    CertificateCredential() : ca(""), certificate(""), privateKey("") {};
-    CertificateCredential(const char *ca, const char *certificate, const char *privateKey) : ca(ca), certificate(certificate), privateKey(privateKey) {};
+    const char *ca = 0;
+    const char *certificate = 0;
+    const char *privateKey = 0;
 
     bool isEmpty()
     {
-        return strlen(ca) == 0 || strlen(certificate) == 0 || strlen(privateKey) == 0;
+        return ca == 0 || certificate == 0 || privateKey == 0;
     }
 };

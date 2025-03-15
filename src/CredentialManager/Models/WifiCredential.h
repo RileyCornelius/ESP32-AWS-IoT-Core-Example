@@ -4,11 +4,8 @@
 
 struct WifiCredential
 {
-    String ssid;
-    String password;
-
-    WifiCredential() : ssid(""), password("") {};
-    WifiCredential(String ssid, String password) : ssid(ssid), password(password) {};
+    String ssid = "";
+    String password = "";
 
     bool isEmpty()
     {

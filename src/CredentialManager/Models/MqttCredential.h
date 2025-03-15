@@ -4,15 +4,11 @@
 
 struct MqttCredential
 {
-    int port;
-    String host;
-    String clientId;
-    String publishTopic;
-    String subscribeTopic;
-
-    MqttCredential() : port(0), host(""), clientId(""), publishTopic(""), subscribeTopic("") {};
-    MqttCredential(int port, String host, String clientId, String publishTopic, String subscribeTopic)
-        : port(port), host(host), clientId(clientId), publishTopic(publishTopic), subscribeTopic(subscribeTopic) {};
+    int port = 0;
+    String host = "";
+    String clientId = "";
+    String publishTopic = "";
+    String subscribeTopic = "";
 
     bool isEmpty()
     {
