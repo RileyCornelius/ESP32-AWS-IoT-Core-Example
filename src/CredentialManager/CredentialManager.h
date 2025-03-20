@@ -11,8 +11,6 @@ class CredentialManager
 private:
     fs::FS &fileSystem;
 
-    String readFile(const char *path);
-
 public:
     CredentialManager(fs::FS &fileSystem) : fileSystem(fileSystem) {};
 

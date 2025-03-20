@@ -11,20 +11,6 @@ extern const char aws_root_ca_pem_start[] asm("_binary_certs_AmazonRootCA1_pem_s
 extern const char certificate_pem_crt_start[] asm("_binary_certs_certificate_pem_crt_start");
 extern const char private_pem_key_start[] asm("_binary_certs_private_pem_key_start");
 
-String CredentialManager::readFile(const char *path)
-{
-    Serial.printf("Reading file: %s\r\n", path);
-    File file = fileSystem.open(path, FILE_READ);
-    if (!file)
-    {
-        Serial.printf("Failed to open file: %s\r\n", path);
-        return "";
-    }
-    String content = file.readString();
-    file.close();
-    return content;
-}
-
 CertificateCredential CredentialManager::getCertificateCredential()
 {
     CertificateCredential certificateCredential = {
